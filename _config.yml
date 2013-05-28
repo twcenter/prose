@@ -12,6 +12,8 @@ prose:
           label: "Item"
           placeholder: "Select an Item"
           options:
+            - name: "Portada"
+              value: "Portada"
             - name: "Ciencia y Tecnología"
               value: "Ciencia y Tecnología"
             - name: "Cultura y Espectáculos"
