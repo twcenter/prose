@@ -140,6 +140,7 @@ module.exports = {
   // Fired when uploading images via file selection or drag and drop
 
   uploadFile: function(username, repo, path, data, cb) {
+    console.info(data);
     var file = github().getFile();
     file.uploadFile(username, repo, path, data, function(err, res) {
       (err) ? cb('error', err) : cb('sucess', res);

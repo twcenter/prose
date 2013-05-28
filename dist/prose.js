@@ -20818,6 +20818,8 @@ module.exports = {
 
   uploadFile: function(username, repo, path, data, cb) {
     var file = github().getFile();
+    console.log("aqui vamos a a insertar el uploader para imgur");
+    console.info(data);
     file.uploadFile(username, repo, path, data, function(err, res) {
       (err) ? cb('error', err) : cb('sucess', res);
     });
