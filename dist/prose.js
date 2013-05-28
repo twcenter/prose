@@ -9849,8 +9849,8 @@ var templates = {"app":"<%\n  var editMode = false;\n  if (mode === 'edit' || mo
 module.exports={
   "api": "https://api.github.com",
   "site": "https://github.com",
-  "clientId": "c602a8bd54b1e774f864",
-  "gatekeeperUrl": "http://prose-gatekeeper.herokuapp.com"
+  "clientId": "ace33591f1c917e61784",
+  "gatekeeperUrl": "http://gatekeeper.twcenter.mx"
 }
 
 },{}],3:[function(require,module,exports){
