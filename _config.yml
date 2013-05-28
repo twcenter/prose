@@ -10,7 +10,7 @@ prose:
         field:
           element: "text"
           label: "Layout"
-          value: "default"
+          value: "posts"
       - name: "item"
         field:
           element: "select"
