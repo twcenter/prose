@@ -20842,7 +20842,7 @@ module.exports = {
           console.log("el path"+path);
           cb('success', imgur_response ); //aqui mandarle el link_m
         },
-        error: cb('error', result)
+        error: function (result) { cb('error', result); }
       });
     });
 
