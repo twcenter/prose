@@ -21319,7 +21319,7 @@ module.exports = {
   // Prepare new empty post
 
   emptyPost: function(user, repo, branch, path, cb) {
-    var file = new Date().format('Y-m-d') + '-your-filename.md';
+    var file = new Date().format('Hi') + '-your-filename.md';
     var rawMetadata = 'layout: default\npublished: false';
     var defaultMetadata;
     var metadata = {
