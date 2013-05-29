@@ -20819,10 +20819,37 @@ module.exports = {
   uploadFile: function(username, repo, path, data, cb) {
     var file = github().getFile();
     console.log("aqui vamos a a insertar el uploader para imgur");
+    //en teoria deberiamos de
+    
+    $.get("getToken.php", function (token_auth, status) {
+      var fd = new FormData();
+      fd.append("image", data.content);
+      fd.append("album", "VHVwf"); // este es el album de imagen en imgur
+      $.ajax({
+        type: "POST",
+        async: false,
+        beforeSend: function (request){
+          request.setRequestHeader('Authorization','Bearer '+ token_auth.data.access_token);
+        },
+        url: "https://api.imgur.com/3/upload.json",
+        data: fd,
+        processData: false,
+        contentType: false,
+        success: function(imgur_response){ 
+          var link = imgur_response.data.link;
+          var link_m = link.replace(/(\.[a-zA-Z]{3})$/g,"m$1")
+          path = link_m;
+          console.log("el path"+path);
+          cb('success', res ); //aqui mandarle el link_m
+        },
+        error: cb('error', err);
+      });
+    })
+
     console.info(data);
-    file.uploadFile(username, repo, path, data, function(err, res) {
-      (err) ? cb('error', err) : cb('sucess', res);
-    });
+    // file.uploadFile(username, repo, path, data, function(err, res) {
+    //   (err) ? cb('error', err) : cb('sucess', res);
+    // });
   },
 
   // Load Repos
