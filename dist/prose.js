@@ -20842,7 +20842,10 @@ module.exports = {
           console.log("el path"+path);
           cb('success', res ); //aqui mandarle el link_m
         },
-        error: cb('error', err)
+        error: function (result) {
+          console.log("error");
+          console.info(result);
+        }
       });
     });
 
