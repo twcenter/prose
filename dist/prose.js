@@ -21002,7 +21002,7 @@ module.exports = {
 
     // Sort by name
     files = _.sortBy(files, function (entry) {
-      return (entry.type === 'tree' ? 'A' : 'B') + entry.path;
+      return (entry.type === 'tree' ? 'B' : 'A') + entry.path;
     });
 
     return {
