@@ -20840,12 +20840,9 @@ module.exports = {
           var link_m = link.replace(/(\.[a-zA-Z]{3})$/g,"m$1")
           path = link_m;
           console.log("el path"+path);
-          cb('success', res ); //aqui mandarle el link_m
+          cb('success', imgur_response ); //aqui mandarle el link_m
         },
-        error: function (result) {
-          console.log("error");
-          console.info(result);
-        }
+        error: cb('error', result)
       });
     });
 
@@ -23842,13 +23839,13 @@ module.exports = Backbone.View.extend({
         } else {
           var $alt = $('input[name="alt"]');
           var image = ($alt.val) ?
-            '![' + $alt.val() + '](/' + path + ')' :
-            '![' + file.name + '](/' + path + ')';
+            '![' + $alt.val() + '](' + path + ')' :
+            '![' + file.name + '](' + path + ')';
 
           view.editor.focus();
           view.editor.replaceSelection(image);
           view.eventRegister.trigger('updateSaveState', 'Saved', 'saved', true);
-
+          /*
           // Update the media directory with the
           // newly uploaded image.
           if (!data.sha && view.assets) {
@@ -23867,6 +23864,7 @@ module.exports = Backbone.View.extend({
             path: structuredPath,
             sha: res.content.sha
           });
+          */
         }
       });
     });
