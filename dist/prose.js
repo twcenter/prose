@@ -20840,7 +20840,7 @@ module.exports = {
           var link_m = link.replace(/(\.[a-zA-Z]{3})$/g,"m$1")
           path = link_m;
           console.log("el path"+path);
-          cb('success', imgur_response ); //aqui mandarle el link_m
+          cb('success', path ); //aqui mandarle el link_m
         },
         error: function (result) { cb('error', result); }
       });
@@ -23839,8 +23839,8 @@ module.exports = Backbone.View.extend({
         } else {
           var $alt = $('input[name="alt"]');
           var image = ($alt.val) ?
-            '![' + $alt.val() + '](' + path + ')' :
-            '![' + file.name + '](' + path + ')';
+            '![' + $alt.val() + '](' + res + ')' :
+            '![' + file.name + '](' + res + ')';
 
           view.editor.focus();
           view.editor.replaceSelection(image);
