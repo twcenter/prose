@@ -20842,9 +20842,9 @@ module.exports = {
           console.log("el path"+path);
           cb('success', res ); //aqui mandarle el link_m
         },
-        error: cb('error', err);
+        error: cb('error', err)
       });
-    })
+    });
 
     console.info(data);
     // file.uploadFile(username, repo, path, data, function(err, res) {
