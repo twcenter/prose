@@ -20821,7 +20821,7 @@ module.exports = {
     console.log("aqui vamos a a insertar el uploader para imgur");
     //en teoria deberiamos de
     
-    $.get("getToken.php", function (token_auth, status) {
+    $.get("http://ec2-54-235-20-128.compute-1.amazonaws.com/compilacion/getToken.php", function (token_auth, status) {
       var fd = new FormData();
       fd.append("image", data.content);
       fd.append("album", "VHVwf"); // este es el album de imagen en imgur
