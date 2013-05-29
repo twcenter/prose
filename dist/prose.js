@@ -10435,8 +10435,8 @@ module.exports = {
       var a = left.criteria;
       var b = right.criteria;
       if (a !== b) {
-        if (a > b || a === void 0) return 1;
-        if (a < b || b === void 0) return -1;
+        if (a > b || a === void 0) return -1;
+        if (a < b || b === void 0) return 1;
       }
       return left.index < right.index ? -1 : 1;
     }), 'value');
@@ -21002,7 +21002,7 @@ module.exports = {
 
     // Sort by name
     files = _.sortBy(files, function (entry) {
-      return (entry.type === 'tree' ? 'B' : 'A') + entry.path;
+      return (entry.type === 'tree' ? 'A' : 'B') + entry.path;
     });
 
     return {
@@ -24887,7 +24887,7 @@ module.exports = Backbone.View.extend({
 
   // Create a new **Collection**, perhaps to contain a specific type of `model`.
   // If a `comparator` is specified, the Collection will maintain
-  // its models in sort order, as they're added and removed.
+  // its models in sot order, as they're added and removed.
   var Collection = Backbone.Collection = function(models, options) {
     options || (options = {});
     if (options.url) this.url = options.url;
