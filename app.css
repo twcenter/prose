@@ -384,6 +384,7 @@ ins {
 
 .prose img {
   max-width:100%;
+  float left;
   }
 
 .prose a {
