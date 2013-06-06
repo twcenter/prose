@@ -21438,8 +21438,8 @@ module.exports = {
 
     function published(metadata) {
       // Given a YAML front matter, determines published or not
-      // default to published unless explicitly set to false
-      return !metadata.match(/published: false/);
+      // default to not published unless explicitly set to true
+      return metadata.match(/published: true/);
     }
 
     function parse(content) {
