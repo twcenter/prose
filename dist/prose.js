@@ -29075,13 +29075,20 @@ var _ = require('underscore');
 
       // Get commits
       // --------
+      this.recently() = function(){
+        var dateOffset = (30*1000) * 5; //half an hour
+        var myDate = new Date();
+        myDate.setTime(myDate.getTime() - dateOffset);
+        var since = myDate.toISOString();
+        return "since="+since;
+      }
 
       this.getCommit = function(sha, cb) {
-        _request("GET", repoPath + "/commits/" + sha, null, cb);
+        _request("GET", repoPath + "/commits/" + sha+"?"+this.since(), null, cb);
       };
 
       this.getCommits = function(branch, lastModified, cb) {
-        _request("GET", repoPath + "/commits" + "?sha=" + branch, null, cb, false, false, [
+        _request("GET", repoPath + "/commits" + "?sha=" + branch+"&"this.since(), null, cb, false, false, [
           ['If-Modified-Since', lastModified]
         ]);
       };
