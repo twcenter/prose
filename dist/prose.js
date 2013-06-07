@@ -21048,7 +21048,7 @@ module.exports = {
     var repo = this.getRepo(user, reponame);
 
     function load(repodata) {
-      repo.getTree(branch + '?', function(err, tree) {
+      repo.getTree(branch + '?recursive=true', function(err, tree) {
 
         // TODO This could be better. It would be great to
         // avoid the callback dependency and order when
