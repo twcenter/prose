@@ -29075,7 +29075,7 @@ var _ = require('underscore');
 
       // Get commits
       // --------
-      this.recently = function(){
+      this.since = function(){
         var dateOffset = (30*1000) * 5; //half an hour
         var myDate = new Date();
         myDate.setTime(myDate.getTime() - dateOffset);
