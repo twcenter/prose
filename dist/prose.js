@@ -21048,7 +21048,7 @@ module.exports = {
     var repo = this.getRepo(user, reponame);
 
     function load(repodata) {
-      repo.getTree(branch + '?recursive=true', function(err, tree) {
+      repo.getTree(branch + '?', function(err, tree) {
 
         // TODO This could be better. It would be great to
         // avoid the callback dependency and order when
@@ -28967,7 +28967,7 @@ var _ = require('underscore');
       this.getSha = function(branch, path, cb) {
         // Just use head if path is empty
         if (path === "") return that.getRef("heads/"+branch, cb);
-        that.getTree(branch+"?recursive=true", function(err, tree) {
+        that.getTree(branch+"?", function(err, tree) {
           var file = _.select(tree, function(file) {
             return file.path === path;
           })[0];
@@ -29135,7 +29135,7 @@ var _ = require('underscore');
 
       this.remove = function(branch, path, cb) {
         updateTree(branch, function(err, latestCommit) {
-          that.getTree(latestCommit+"?recursive=true", function(err, tree) {
+          that.getTree(latestCommit+"?", function(err, tree) {
             // Update Tree
             var newTree = _.reject(tree, function(ref) { return ref.path === path; });
             _.each(newTree, function(ref) {
@@ -29158,7 +29158,7 @@ var _ = require('underscore');
 
       this.move = function(branch, path, newPath, cb) {
         updateTree(branch, function(err, latestCommit) {
-          that.getTree(latestCommit+"?recursive=true", function(err, tree) {
+          that.getTree(latestCommit+"?", function(err, tree) {
             // Update Tree
             _.each(tree, function(ref) {
               if (ref.path === path) ref.path = newPath;
