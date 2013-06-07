@@ -29088,7 +29088,7 @@ var _ = require('underscore');
       };
 
       this.getCommits = function(branch, lastModified, cb) {
-        _request("GET", repoPath + "/commits" + "?sha=" + branch+"&"this.since(), null, cb, false, false, [
+        _request("GET", repoPath + "/commits" + "?sha=" + branch+"&"+this.since(), null, cb, false, false, [
           ['If-Modified-Since', lastModified]
         ]);
       };
