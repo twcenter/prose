@@ -21,6 +21,7 @@ module.exports = Backbone.View.extend({
     'click .dialog .insert': 'dialogInsert',
     'click .save-action': 'updateFile',
     'click .publish-flag': 'togglePublishing',
+    'click .draft-to-post': 'draft',
     'click .meta .finish': 'backToMode',
     'change #upload': 'fileInput',
     'change .meta input': 'makeDirty'
@@ -78,32 +79,26 @@ module.exports = Backbone.View.extend({
     this.eventRegister = app.eventRegister;
 
     // Listen for button clicks from the vertical nav
-    _.bindAll(this, 'edit', 'preview', 'deleteFile', 'save', 'translate', 'updateFile', 'meta', 'remove');
+    _.bindAll(this, 'edit', 'preview', 'deleteFile', 'showDiff', 'translate', 'draft', 'updateFile', 'meta', 'remove', 'cancelSave');
     this.eventRegister.bind('edit', this.edit);
     this.eventRegister.bind('preview', this.preview);
     this.eventRegister.bind('deleteFile', this.deleteFile);
-    this.eventRegister.bind('save', this.save);
+    this.eventRegister.bind('showDiff', this.showDiff);
     this.eventRegister.bind('updateFile', this.updateFile);
     this.eventRegister.bind('translate', this.translate);
+    this.eventRegister.bind('draft', this.draft);
     this.eventRegister.bind('meta', this.meta);
     this.eventRegister.bind('remove', this.remove);
-
-    // Add a permalink to the sidebar is `siteurl` exists in configuration.
-    this.data.permalink = false;
-    if (this.config.siteurl) {
-        this.data.permalink = this.config.siteurl + '/' + this.data.path + '/' + this.data.file;
-    }
-
-    this.eventRegister.trigger('sidebarContext', this.data);
-    this.renderHeading();
+    this.eventRegister.bind('cancelSave', this.cancelSave);
 
     var tmpl = _(window.app.templates.post).template();
 
     $(this.el).empty().append(tmpl(_.extend(this.model, {
-      mode: app.state.mode,
-      metadata: this.model.metadata,
-      avatar: this.header.avatar
+      mode: app.state.mode
     })));
+
+    this.renderHeading();
+    this.renderToolbar();
 
     if (this.model.markdown && app.state.mode === 'blob') {
       this.preview();
@@ -147,10 +142,23 @@ module.exports = Backbone.View.extend({
       isPrivate: isPrivate,
       title: _.filepath(this.data.path, this.data.file),
       writable: this.model.writable,
-      alterable: true
+      alterable: true,
+      translate: this.data.translate,
+      lang: this.data.lang,
+      metadata: this.data.metadata
     };
 
-    this.eventRegister.trigger('headerContext', this.header);
+    this.eventRegister.trigger('headerContext', this.header, true);
+  },
+
+  renderToolbar: function() {
+    var tmpl = _(window.app.templates.toolbar).template();
+
+    this.$el.find('#toolbar').empty().append(tmpl(_.extend(this.model, {
+      metadata: this.model.metadata,
+      avatar: this.model.lang,
+      draft: (this.model.path.split('/')[0] === '_drafts') ? true : false
+    })));
   },
 
   edit: function(e) {
@@ -288,6 +296,8 @@ module.exports = Backbone.View.extend({
       trigger: false,
       replace: true
     });
+
+    $('.chzn-select', this.el).trigger('liszt:updated');
   },
 
   makeDirty: function(e) {
@@ -295,11 +305,11 @@ module.exports = Backbone.View.extend({
     if (this.editor && this.editor.getValue) this.model.content = this.editor.getValue();
     if (this.metadataEditor) this.model.metadata = this.metadataEditor.getValue();
 
-    var label = this.model.writable ? 'Save' : 'Submit Change';
+    var label = this.model.writable ? 'Unsaved Changes' : 'Submit Change';
     this.eventRegister.trigger('updateSaveState', label, 'save');
 
     // Pass a popover span to the avatar icon
-    $('.save-action', this.el).find('.popup').html(this.model.alterable ? 'Ctrl&nbsp;+&nbsp;S' : 'Submit Change');
+    $('.save-action', this.el).find('.popup').html(this.model.alterable ? 'Save' : 'Submit Change');
   },
 
   togglePublishing: function(e) {
@@ -307,11 +317,13 @@ module.exports = Backbone.View.extend({
 
     if ($target.hasClass('published')) {
       $target
+        .empty()
         .html('Unpublish<span class="ico checkmark"></span>')
         .removeClass('published')
         .attr('data-state', false);
     } else {
       $target
+        .empty()
         .html('Publish<span class="ico checkmark"></span>')
         .addClass('published')
         .attr('data-state', true);
@@ -322,7 +334,7 @@ module.exports = Backbone.View.extend({
   },
 
   showDiff: function() {
-    var $diff = $('#diff', this.el);
+    var $diff = this.$el.find('#diff');
     var text1 = this.model.persisted ? _.escape(this.prevFile) : '';
     var text2 = _.escape(this.serialize());
     var d = diff.diffWords(text1, text2);
@@ -339,7 +351,7 @@ module.exports = Backbone.View.extend({
     }
 
     // Content Window
-    $('.views .view', this.el).removeClass('active');
+    this.$el.find('.views .view').removeClass('active');
     $diff.html('<pre>' + compare + '</pre>');
     $diff.addClass('active');
   },
@@ -356,8 +368,9 @@ module.exports = Backbone.View.extend({
     this.eventRegister.trigger('closeSettings');
   },
 
-  save: function() {
-    this.showDiff();
+  cancelSave: function() {
+    this.$el.find('.views .view').removeClass('active');
+    this.$el.find('.' + app.state.mode).addClass('active');
   },
 
   refreshCodeMirror: function() {
@@ -399,7 +412,7 @@ module.exports = Backbone.View.extend({
   },
 
   serialize: function() {
-    var metadata = this.metadataEditor ? this.metadataEditor.getRaw() : jsyaml.dump(this.model.metadata);
+    var metadata = this.metadataEditor ? this.metadataEditor.getRaw() : jsyaml.dump(this.model.metadata).trim();
 
     if (this.model.jekyll) {
       return ['---', metadata, '---'].join('\n') + '\n\n' + this.model.content;
@@ -455,16 +468,11 @@ module.exports = Backbone.View.extend({
             view.eventRegister.trigger('updateSaveState', '!&nbsp;Try&nbsp;again&nbsp;in 30&nbsp;seconds', 'error');
             return;
           }
-
           view.dirty = false;
           view.model.persisted = true;
           view.model.file = filename;
 
-          if (app.state.mode === 'new') {
-            app.state.mode = 'edit';
-            view.eventRegister.trigger('sidebarContext', view.data);
-          }
-
+          if (app.state.mode === 'new') app.state.mode = 'edit';
           view.renderHeading();
           view.updateURL();
           view.prevFile = filecontent;
@@ -492,15 +500,37 @@ module.exports = Backbone.View.extend({
     });
   },
 
+  saveDraft: function(filepath, filename, filecontent, message) {
+    var view = this;
+    view.eventRegister.trigger('updateSaveState', 'Saving', 'saving');
+    window.app.models.saveFile(app.state.user, app.state.repo, app.state.branch, filepath, filecontent, message, function(err) {
+      if (err) {
+        view.eventRegister.trigger('updateSaveState', '!&nbsp;Try&nbsp;again&nbsp;in 30&nbsp;seconds', 'error');
+        return;
+      }
+      view.dirty = false;
+      view.model.persisted = true;
+      view.model.file = filename;
+
+      if (app.state.mode === 'new') app.state.mode = 'edit';
+      view.renderHeading();
+      view.updateURL();
+      view.prevFile = filecontent;
+      view.closeSettings();
+      view.updatePublishState();
+      view.eventRegister.trigger('updateSaveState', 'Saved', 'saved', true);
+    });
+  },
+
   updatePublishState: function() {
     // Update the publish key wording depening on what was saved
     var $publishKey = $('.publish-flag', this.el);
     var key = $publishKey.attr('data-state');
 
     if (key === 'true') {
-      $publishKey.empty().html('Published<span class="ico checkmark"></span>');
+      $publishKey.html('Published<span class="ico checkmark"></span>');
     } else {
-      $publishKey.empty().html('Unpublished<span class="ico checkmark"></span>');
+      $publishKey.html('Unpublished<span class="ico checkmark"></span>');
     }
   },
 
@@ -551,21 +581,42 @@ module.exports = Backbone.View.extend({
     var filename = _.extractFilename(filepath)[1];
     var filecontent = this.serialize();
     var $message = $('.commit-message');
+    var noVal = 'Updated ' + filename;
+    if (app.state.mode === 'new') noVal = 'Created ' + filename;
 
-    var message = $message.val() || $message.attr('placeholder');
+    var message = $message.val() || noVal;
     var method = this.model.writable ? this.saveFile : this.sendPatch;
 
     // Update content
     this.model.content = (this.editor) ? this.editor.getValue() : '';
 
-    // If a permalink exists, update the path
-    if (this.data.permalink) {
-      this.data.permalink = this.config.siteurl + '/' + filepath;
-      this.eventRegister.trigger('sidebarContext', this.data);
-    }
-
     // Delegate
     method.call(this, filepath, filename, filecontent, message);
+    return false;
+  },
+
+  draft: function() {
+    var filepath = _.extractFilename($('input.filepath').val());
+    var basepath = filepath[0].split('/');
+    var filename = filepath[1];
+    var postType = basepath[0];
+    var filecontent = this.serialize();
+    var message = 'Created draft of ' + filename;
+
+    if (postType === '_posts') {
+      basepath.splice(0, 1, '_drafts');
+      filepath.splice(0, 1, basepath.join('/'));
+      this.saveDraft(filepath.join('/'), filename, filecontent, message);
+      app.state.path = this.model.path = filepath[0];
+    } else {
+      basepath.splice(0, 1, '_posts');
+      filepath.splice(0, 1, basepath.join('/'));
+      message = 'Create post from draft of ' + filename;
+      this.saveFile(filepath.join('/'), filename, filecontent, message);
+      app.state.path = this.model.path = filepath[0];
+    }
+
+    this.renderToolbar();
     return false;
   },
 
@@ -615,7 +666,7 @@ module.exports = Backbone.View.extend({
       hash.splice(-2, 2, href, hash[hash.length - 1]);
     }
 
-    router.navigate(_(hash).compact().join('/'), true);
+    router.navigate(_(hash).compact().join('/') + '?lang=' + href + '&translate=true', true);
 
     return false;
   },
@@ -655,7 +706,17 @@ module.exports = Backbone.View.extend({
               $metadataEditor.append(tmpl({
                 name: data.name,
                 label: data.field.label,
-                value: data.field.value
+                value: data.field.value,
+                type: 'text'
+              }));
+              break;
+            case 'number':
+              tmpl = _(window.app.templates.text).template();
+              $metadataEditor.append(tmpl({
+                name: data.name,
+                label: data.field.label,
+                value: data.field.value,
+                type: 'number'
               }));
               break;
             case 'select':
@@ -691,7 +752,8 @@ module.exports = Backbone.View.extend({
           $metadataEditor.append(tmpl({
             name: key,
             label: key,
-            value: data
+            value: data,
+            type: 'text'
           }));
         }
       });
@@ -715,16 +777,24 @@ module.exports = Backbone.View.extend({
 
     function getValue() {
       var metadata = {};
-      metadata.published = $('.publish-flag').attr('data-state');
+
+      if ($('.publish-flag').attr('data-state') === 'true') {
+        metadata.published = true;
+      } else {
+        metadata.published = false;
+      }
 
       _.each($metadataEditor.find('[name]'), function(item) {
-        var value = $(item).val();
+        var $item = $(item);
+        var value = $item.val();
 
         switch (item.type) {
           case 'select-multiple':
           case 'select-one':
+          case 'hidden':
           case 'text':
             if (value) {
+              value = $item.data('type') === 'number' ? Number(value) : value;
               if (metadata.hasOwnProperty(item.name)) {
                 metadata[item.name] = _.union(metadata[item.name], value);
               } else {
@@ -756,13 +826,6 @@ module.exports = Backbone.View.extend({
               metadata[item.name] = false;
             }
             break;
-          case 'hidden':
-            if (metadata.hasOwnProperty(item.name)) {
-              metadata[item.name] = _.union(metadata[item.name], JSON.parse(value));
-            } else {
-              metadata[item.name] = JSON.parse(value);
-            }
-            break;
         }
       });
 
@@ -778,7 +841,7 @@ module.exports = Backbone.View.extend({
     }
 
     function getRaw() {
-      return jsyaml.dump(getValue());
+      return jsyaml.dump(getValue()).trim();
     }
 
     function setValue(data) {
@@ -814,6 +877,7 @@ module.exports = Backbone.View.extend({
                     matched = true;
                   }
                   break;
+                case 'hidden':
                 case 'text':
                   input[i].value = value;
                   matched = true;
@@ -828,7 +892,6 @@ module.exports = Backbone.View.extend({
               }
 
             } else {
-
               switch (input[i].type) {
               case 'select-multiple':
               case 'select-one':
@@ -841,6 +904,7 @@ module.exports = Backbone.View.extend({
                   matched = true;
                 }
                 break;
+              case 'hidden':
               case 'text':
                 input[i].value = value;
                 matched = true;
@@ -899,7 +963,8 @@ module.exports = Backbone.View.extend({
           $metadataEditor.append(tmpl({
             name: key,
             label: value,
-            value: value
+            value: value,
+            type: 'text'
           }));
           break;
         case 'object':
@@ -1504,11 +1569,13 @@ module.exports = Backbone.View.extend({
     this.eventRegister.unbind('edit', this.postViews);
     this.eventRegister.unbind('preview', this.preview);
     this.eventRegister.unbind('deleteFile', this.deleteFile);
-    this.eventRegister.unbind('save', this.save);
+    this.eventRegister.unbind('showDiff', this.showDiff);
     this.eventRegister.unbind('translate', this.translate);
+    this.eventRegister.unbind('draft', this.draft);
     this.eventRegister.unbind('updateFile', this.updateFile);
     this.eventRegister.unbind('meta', this.updateFile);
     this.eventRegister.unbind('remove', this.remove);
+    this.eventRegister.unbind('cancelSave', this.cancelSave);
 
     // Clear any file state classes in #prose
     this.eventRegister.trigger('updateSaveState', '', '');

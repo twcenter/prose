@@ -3,14 +3,14 @@
     data-index='<%= index %>'>
 
   <% if (isBinary) { %>
-    <div class='fl icon round <%= extension %> <% if (isMedia) { %>media<% } %>'></div>
+    <div class='listing-icon icon round <%= extension %> <% if (isMedia) { %>media<% } %>'></div>
   <% } else { %>
-    <a href='#<%= user %>/<%= repo %>/edit/<%= branch %>/<%= path %>' class='fl'>
+    <a href='#<%= user %>/<%= repo %>/edit/<%= branch %>/<%= path %>' class='listing-icon'>
       <span class='icon round <%= extension %> <% if (isMedia) { %>media<% } %>'></span>
     </a>
   <% } %>
 
-  <div class='fl details'>
+  <div class='details'>
     <div class='actions fr clearfix'>
       <% if (!isBinary) { %>
         <a class='clearfix'
@@ -26,7 +26,7 @@
           data-user='<%= user %>'
           data-repo='<%= repo %>'
           data-branch='<%= branch %>'
-          data-file='<%= name %>'
+          data-file='<%= file %>'
           href='#'>
           <span class='ico rubbish small'></span>
         </a>
@@ -35,7 +35,7 @@
     <% if (isBinary) { %>
       <h3 class='title' title='<%= name %>'><%= name %></h3>
     <% } else { %>
-        <% if (extension === 'md') { %>
+        <% if (isMarkdown) { %>
           <a class='clearfix' href='#<%= user %>/<%= repo %>/edit/<%= branch %>/<%= path %>'>
             <h3><%= filename %></h3>
             <span class='deemphasize'><%= name %></span>

@@ -622,6 +622,8 @@ module.exports = {
       'published': false
     };
 
+    repo = this.getRepo(user, repo);
+
     // load default metadata
     var cfg = app.state.config;
     var q = queue();
@@ -697,12 +699,32 @@ module.exports = {
     }
 
     q.await(function() {
+      var query = path.split('?')[1];
+      var translate = false;
+      var lang;
 
-      // If ?file= in path, use it as file name
-      if (path.indexOf('?file=') !== -1) {
-        file = path.split('?file=')[1];
-        path = path.split('?file=')[0].replace(/\/$/, '');
+      // remove query string and trailing slash
+      path = path.split('?')[0].replace(/\/$/, '');
+
+      if (query) {
+        // If file= in path, use it as file name
+        if (query.indexOf('file=') !== -1) {
+          file = query.match(/file=([^&]*)/)[1];
+
+          // remove filename and trailing slash
+          path = path.split(file)[0].replace(/\/$/, '');
+        }
+
+        // If lang= in path, set lang and add to categories
+        if (query.indexOf('lang=') !== -1) {
+          lang = query.match(/lang=([^&]*)/)[1];
+          metadata.lang = lang;
+          metadata.categories = !_.isUndefined(metadata.categories) && !_.isNull(metadata.categories) ? _.union(metadata.categories, lang) : [lang];
+        }
+
+        translate = query.indexOf('translate=true') !== -1 ? true : false;
       }
+
       cb(null, {
         'metadata': metadata,
         'default_metadata': defaultMetadata,
@@ -712,7 +734,8 @@ module.exports = {
         'published': false,
         'persisted': false,
         'writable': true,
-        'file': file
+        'file': file,
+        'translate': translate
       });
     });
   },
@@ -749,7 +772,7 @@ module.exports = {
         jekyll: hasMetadata
       };
 
-      res.content = content.replace(/^(---\n)((.|\n)*?)\n---\n?/, function (match, dashes, frontmatter) {
+      res.content = content.replace(/^(---\n)((.|\n)*?)---\n?/, function (match, dashes, frontmatter) {
         try {
           res.metadata = jsyaml.load(frontmatter);
           res.metadata.published = published(frontmatter);
@@ -823,10 +846,10 @@ module.exports = {
     q.await((function() {
       cb(err, _.extend(post, {
         'default_metadata': defaultMetadata,
-        'markdown': _.markdown(file),
+        'markdown': _.markdown(file.split('?')[0]),
         'repo': repo,
         'path': path,
-        'file': file,
+        'file': file.split('?')[0],
         'persisted': true
       }));
     }).bind(this));

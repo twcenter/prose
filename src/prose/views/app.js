@@ -11,14 +11,15 @@ module.exports = Backbone.View.extend({
       'click .post-views .preview': 'preview',
       'click .post-views .settings': 'settings',
       'click .post-views .meta': 'meta',
-      'click .auth .logout': 'logout',
+      'click .logout': 'logout',
       'click a.item.removed': 'restoreFile',
       'click a.save': 'save',
-      'click a.save.confirm': 'updateFile',
-      'click a.save-action': 'updateFile',
-      'click a.cancel': 'cancelSave',
+      'click a.cancel': 'cancel',
+      'click a.confirm': 'updateFile',
       'click a.delete': 'deleteFile',
       'click a.translate': 'translate',
+      'click a.draft': 'draft',
+      'click .mobile-menu .toggle': 'toggleMobileClass',
       'focus input.filepath': 'checkPlaceholder',
       'keypress input.filepath': 'saveFilePath'
     },
@@ -68,14 +69,17 @@ module.exports = Backbone.View.extend({
     },
 
     render: function(options) {
+      var view = this;
       var tmpl = _(window.app.templates.app).template();
       var isJekyll = false;
       var errorPage = false;
-      var hideInterface = false;
+      var hideInterface = false; // Flag for unauthenticated landing
+      this.noMenu = false; // Prevents a mobile toggle from appearing when nto required.
 
       if (options) {
         if (options.hideInterface) hideInterface = options.hideInterface;
         if (options.jekyll) isJekyll = options.jekyll;
+        if (options.noMenu) this.noMenu = options.noMenu;
         if (options.error) errorPage = options.error;
       }
 
@@ -88,29 +92,43 @@ module.exports = Backbone.View.extend({
       $(this.el).empty().append(tmpl(_.extend(this.model, app.state, {
         jekyll: isJekyll,
         error: errorPage,
+        noMenu: view.noMenu,
         lang: (app.state.file) ? _.mode(app.state.file) : undefined
       })));
 
       // When the sidebar should be open.
       // Fix this in re-factor, could be much tighter
-      if (app.state.mode === 'tree') {
+      if (app.state.mode === 'tree' ||
+          app.state.mode === '' && window.authenticated && app.state.user) {
         $('#prose').toggleClass('open', true);
-      } else if (app.state.mode === '' && window.authenticated && app.state.user !== '') {
-        $('#prose').toggleClass('open', true);
+        $('#prose').toggleClass('mobile', false);
       } else {
-        $('#prose').toggleClass('open', false);
+        $('#prose').toggleClass('open mobile', false);
       }
 
       return this;
+    },
+
+    toggleMobileClass: function(e) {
+      $(e.target).toggleClass('active');
+      $(this.el).toggleClass('mobile');
+      return false;
     },
 
     documentTitle: function(title) {
       document.title = title + ' · Prose';
     },
 
-    headerContext: function(data) {
+    headerContext: function(data, alterable) {
       var heading = _(window.app.templates.heading).template();
-      $('#heading').empty().append(heading(data));
+
+      if (data.writable) this.writable = true;
+      if (data.lang) this.lang = data.lang;
+      if (data.metadata) this.metadata = data.metadata;
+
+      $('#heading').empty().append(heading(_.extend(data, {
+        alterable: alterable ? true : false
+      })));
     },
 
     filenameInput: function() {
@@ -118,25 +136,20 @@ module.exports = Backbone.View.extend({
     },
 
     sidebarContext: function(data) {
-      var sidebarTmpl;
-
       if (app.state.mode === 'tree') {
-        sidebarTmpl = _(app.templates.sidebarProject).template();
-      } else if (data.file) {
-        this.writable = data.writable;
-        sidebarTmpl = _(app.templates.settings).template();
+        var tmpl = _(app.templates.sidebarProject).template();
+
+        // Branch Switching
+        _.defer(function() {
+          $('.chzn-select', this.el).chosen().change(function() {
+              router.navigate($(this).val(), true);
+          });
+        });
+
+        $('#drawer', this.el)
+          .empty()
+          .append(tmpl(data));
       }
-
-      $('#drawer', this.el)
-        .empty()
-        .append(sidebarTmpl(data));
-
-      if (data.permalink) utils.autoSelect($('.permalink'));
-
-      // Branch Switching
-      $('.chzn-select').chosen().change(function() {
-          router.navigate($(this).val(), true);
-      });
     },
 
     recentFiles: function(data) {
@@ -146,7 +159,6 @@ module.exports = Backbone.View.extend({
 
     // Event Triggering to other files
     edit: function(e) {
-      this.viewing = 'edit';
       this.eventRegister.trigger('edit', e);
       return false;
     },
@@ -155,7 +167,6 @@ module.exports = Backbone.View.extend({
       if ($(e.target).data('jekyll')) {
         this.eventRegister.trigger('preview', e);
       } else {
-        this.viewing = 'preview';
         this.eventRegister.trigger('preview', e);
         // Cancel propagation
         return false;
@@ -164,23 +175,30 @@ module.exports = Backbone.View.extend({
 
     // Event Triggering to other files
     meta: function(e) {
-      this.viewing = 'meta';
       this.eventRegister.trigger('meta', e);
       return false;
     },
 
     settings: function(e) {
-      $navItems = $('.navigation a', this.el);
-      if (!this.viewing) this.viewing = app.state.mode;
+      var tmpl = _(app.templates.settings).template();
+      var $navItems = $('.navigation a', this.el);
+      this.cancel();
 
-      if ($(e.target, this.el).hasClass('active')) {
-        $navItems.removeClass('active');
-        $('.navigation .' + this.viewing, this.el).addClass('active');
-        $('#prose').toggleClass('open', false);
-      } else {
+      if (!$(e.target, this.el).hasClass('active')) {
         $navItems.removeClass('active');
         $(e.target, this.el).addClass('active');
-        $('#prose').toggleClass('open', true);
+
+        $('#drawer', this.el)
+          .empty()
+          .append(tmpl({
+            lang: this.lang,
+            writable: this.writable,
+            metadata: this.metadata,
+            jekyll: this.model.jekyll,
+            draft: (app.state.path.split('/')[0] === '_drafts') ? true : false
+          }));
+
+        $('#prose').toggleClass('open mobile', true);
       }
 
       return false;
@@ -195,7 +213,7 @@ module.exports = Backbone.View.extend({
         $('.post-views .edit', this.el).addClass('active');
       }
 
-      $('#prose').toggleClass('open', false);
+      $('#prose').toggleClass('open mobile', false);
     },
 
     restoreFile: function(e) {
@@ -241,35 +259,46 @@ module.exports = Backbone.View.extend({
       this.eventRegister.trigger('translate', e);
       return false;
     },
+    
+    draft: function(e) {
+      this.eventRegister.trigger('draft', e);
+      return false;
+    },
 
     save: function(e) {
-      this.eventRegister.trigger('save', e);
-      this.toggleCommit();
+      var tmpl = _(app.templates.sidebarSave).template();
+      this.eventRegister.trigger('showDiff', e);
+
+      if ($(e.target, this.el).hasClass('active')) {
+        this.cancel();
+      } else {
+        $('.navigation a', this.el).removeClass('active');
+        $(e.target, this.el).addClass('active');
+
+        $('#drawer', this.el)
+          .empty()
+          .append(tmpl({
+            writable: this.writable
+        }));
+
+        $('#prose').toggleClass('open mobile', true);
+
+        var $message = $('.commit-message', this.el);
+        var filepath = $('input.filepath').val();
+        var filename = _.extractFilename(filepath)[1];
+        var placeholder = 'Updated ' + filename;
+        if (app.state.mode === 'new') placeholder = 'Created ' + filename;
+        $message.attr('placeholder', placeholder).focus();
+      }
+
       return false;
     },
 
-    cancelSave: function(e) {
-      this.toggleCommit();
-      return false;
-    },
-
-    toggleCommit: function() {
-      var $message = $('.commit-message', this.el);
-      var filepath = $('input.filepath').val();
-      var filename = _.extractFilename(filepath)[1];
-      var placeholder = 'Updated ' + filename;
-      if (app.state.mode === 'new') placeholder = 'Created ' + filename;
-
-      $('.commit', this.el).toggleClass('active');
-      $('.button.save', this.el).toggleClass('confirm');
-
-      $('.button.save', this.el)
-        .html($('.button.save', this.el)
-        .hasClass('confirm') ?
-          (this.writable ? 'Commit' : 'Send Change Request') :
-          (this.writable ? 'Save' : 'Submit Change'));
-
-      $message.attr('placeholder', placeholder).focus();
+    cancel: function(e) {
+      $('.navigation a', this.el).removeClass('active');
+      $('.navigation .' + app.state.mode, this.el).addClass('active');
+      $('#prose').toggleClass('open mobile', false);
+      this.eventRegister.trigger('cancelSave', e);
       return false;
     },
 
@@ -307,7 +336,7 @@ module.exports = Backbone.View.extend({
 
       // Pass a popover span to the avatar icon
       $('#heading', this.el).find('.popup').html(label);
-      $('.save-action').find('.popup').html(label);
+      $('.action').find('.popup').html(label);
 
       $(this.el)
         .removeClass('error saving saved save')

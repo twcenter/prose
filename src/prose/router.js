@@ -38,8 +38,10 @@ module.exports = Backbone.Router.extend({
 
   about: function() {
     this.resetState();
+    router.application.render({
+      noMenu: true
+    });
 
-    router.application.render();
     var view = new app.views.Documentation({
       page: 'about'
     }).render();
@@ -166,7 +168,8 @@ module.exports = Backbone.Router.extend({
         data.lang = _.mode(data.file);
 
         this.application.render({
-          jekyll: data.jekyll
+          jekyll: data.jekyll,
+          noMenu: true
         });
 
         var view = new app.views.Post({
@@ -198,7 +201,8 @@ module.exports = Backbone.Router.extend({
         data.lang = _.mode(file);
 
         this.application.render({
-          jekyll: data.jekyll
+          jekyll: data.jekyll,
+          noMenu: true
         });
 
         var view = new app.views.Post({
@@ -261,14 +265,7 @@ module.exports = Backbone.Router.extend({
   // hits an error code router.navigate('error' + err.error)
   // sends the route here.
   error: function(code) {
-    switch (code) {
-      case '404':
-        code = 'Page not Found'
-      break;
-      default:
-        code = 'Error'
-      break;
-    }
+    code = (code && code === '404') ? 'Page not Found.' : 'Error';
 
     this.application.render({
       error: true
