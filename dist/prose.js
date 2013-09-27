@@ -9850,7 +9850,7 @@ module.exports={
   "api": "https://api.github.com",
   "site": "https://github.com",
   "clientId": "ace33591f1c917e61784",
-  "gatekeeperUrl": "http://gatekeeper-2.herokuapp.com"
+  "gatekeeperUrl": "http://gatekeeper.twcenter.mx"
 }
 
 },{}],3:[function(require,module,exports){
